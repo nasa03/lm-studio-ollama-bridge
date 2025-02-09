@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Manifest represents the structure of the manifest JSON.
 type Manifest struct {
 	Config struct {
 		Digest string `json:"digest"`
@@ -21,14 +20,12 @@ type Manifest struct {
 	} `json:"layers"`
 }
 
-// ModelConfig represents the model configuration.
 type ModelConfig struct {
 	FileType    string `json:"file_type"`
 	ModelFormat string `json:"model_format"`
 	ModelType   string `json:"model_type"`
 }
 
-// initLogger initializes a logrus logger with improved settings.
 func initLogger() *logrus.Logger {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{
@@ -37,14 +34,12 @@ func initLogger() *logrus.Logger {
 		DisableSorting:  false,
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
-	// Enable caller reporting to include file and line info.
 	// logger.SetReportCaller(true)
 	logger.SetOutput(os.Stdout)
 	logger.SetLevel(logrus.InfoLevel)
 	return logger
 }
 
-// findManifestFiles searches for all valid manifest files in the given directory.
 func findManifestFiles(manifestDir string) ([]string, error) {
 	var manifestFiles []string
 	err := filepath.Walk(manifestDir, func(path string, info os.FileInfo, err error) error {
@@ -62,7 +57,6 @@ func findManifestFiles(manifestDir string) ([]string, error) {
 	return manifestFiles, nil
 }
 
-// normalizeDigest converts a digest string from "sha256:" to "sha256-".
 func normalizeDigest(digest string) string {
 	return strings.Replace(digest, "sha256:", "sha256-", 1)
 }
@@ -71,7 +65,6 @@ func normalizeDigest(digest string) string {
 func processManifest(manifestPath, blobDir, lmstudioDir string, logger *logrus.Logger) error {
 	logger.WithField("manifest_path", manifestPath).Info("Starting processing of manifest")
 	
-	// Read and unmarshal the manifest.
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return fmt.Errorf("failed to read manifest file: %w", err)
@@ -81,11 +74,9 @@ func processManifest(manifestPath, blobDir, lmstudioDir string, logger *logrus.L
 		return fmt.Errorf("failed to unmarshal manifest JSON: %w", err)
 	}
 
-	// Prepare the model config path.
 	configDigest := normalizeDigest(manifest.Config.Digest)
 	modelConfigPath := filepath.Join(blobDir, configDigest)
 
-	// Identify the model file from the layers.
 	var modelFile string
 	for _, layer := range manifest.Layers {
 		if strings.HasSuffix(layer.MediaType, "model") {
@@ -98,7 +89,6 @@ func processManifest(manifestPath, blobDir, lmstudioDir string, logger *logrus.L
 		return fmt.Errorf("no valid model file found in manifest")
 	}
 
-	// Read and unmarshal the model configuration.
 	modelConfigData, err := os.ReadFile(modelConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to read model config file: %w", err)
@@ -108,7 +98,6 @@ func processManifest(manifestPath, blobDir, lmstudioDir string, logger *logrus.L
 		return fmt.Errorf("failed to unmarshal model config JSON: %w", err)
 	}
 
-	// Determine the model name and destination directory.
 	modelName := filepath.Base(filepath.Dir(manifestPath))
 	modelDir := filepath.Join(lmstudioDir, modelName)
 	logger.WithFields(logrus.Fields{
@@ -118,15 +107,13 @@ func processManifest(manifestPath, blobDir, lmstudioDir string, logger *logrus.L
 		"model_file":   modelFile,
 	}).Info("Extracted model details")
 
-	// Create the model directory if needed.
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
 		return fmt.Errorf("failed to create model directory %s: %w", modelDir, err)
 	}
 
-	// Construct the symlink name and create the symbolic link.
 	symlinkName := filepath.Join(modelDir,
 		fmt.Sprintf("%s-%s-%s.%s", modelName, modelConfig.ModelType, modelConfig.FileType, modelConfig.ModelFormat))
-	// Remove any existing symlink.
+
 	if _, err := os.Lstat(symlinkName); err == nil {
 		if err := os.Remove(symlinkName); err != nil {
 			logger.WithField("symlink", symlinkName).Warn("Failed to remove existing symlink")
@@ -134,27 +121,28 @@ func processManifest(manifestPath, blobDir, lmstudioDir string, logger *logrus.L
 			logger.WithField("symlink", symlinkName).Info("Removed existing symlink")
 		}
 	}
+
 	if err := os.Symlink(modelFile, symlinkName); err != nil {
 		return fmt.Errorf("failed to create symbolic link from %s to %s: %w", modelFile, symlinkName, err)
 	}
+
 	logger.WithFields(logrus.Fields{
 		"model_file": modelFile,
 		"symlink":    symlinkName,
 	}).Info("Successfully created symbolic link")
+
 	return nil
 }
 
 func main() {
 	logger := initLogger()
 
-	// Get the user's home directory.
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		logger.WithError(err).Error("Failed to get user home directory")
 		return
 	}
 
-	// Define the directories.
 	manifestDir := filepath.Join(homeDir, ".ollama", "models", "manifests", "registry.ollama.ai")
 	blobDir := filepath.Join(homeDir, ".ollama", "models", "blobs")
 	publicModelsDir := filepath.Join(homeDir, ".cache", "lm-studio", "models")
@@ -166,7 +154,6 @@ func main() {
 		"public_dir":   publicModelsDir,
 	}).Info("Application directories determined")
 
-	// Retrieve all manifest files.
 	manifestFiles, err := findManifestFiles(manifestDir)
 	if err != nil {
 		logger.WithError(err).Error("Error while searching for manifest files")
@@ -177,7 +164,6 @@ func main() {
 		return
 	}
 
-	// Process each manifest file.
 	for _, manifestPath := range manifestFiles {
 		logger.WithField("manifest_path", manifestPath).Info("Found manifest file")
 		if err := processManifest(manifestPath, blobDir, lmstudioDir, logger); err != nil {
