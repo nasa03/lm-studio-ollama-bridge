@@ -2,7 +2,7 @@
 
 `lm-studio-ollama-bridge` is a standalone Go-based utility that synchronizes your local Ollama models with external applications such as LM Studio. Inspired by the original [matts-shell-scripts/syncmodels](https://github.com/technovangelist/matts-shell-scripts/blob/main/syncmodels) project , `lm-studio-ollama-bridge` extends its functionality by making it more performant and portable (not that it needs to be but why not?).
 
-This [video demonstration](https://www.youtube.com/watch?v=UfhXbwA5thQ) by [Matt Williams](https://www.youtube.com/@technovangelist) (a founding member of Ollama) walks through the synchronization workflow and highlights how [matts-shell-scripts/syncmodels](https://github.com/technovangelist/matts-shell-scripts/blob/main/syncmodels) integrates Ollama models with LM Studio and other tools.
+This [video demonstration](https://www.youtube.com/watch?v=UfhXbwA5thQ) by [Matt Williams](https://www.youtube.com/@technovangelist) (a founding maintainer of Ollama) walks through the synchronization workflow and highlights how [matts-shell-scripts/syncmodels](https://github.com/technovangelist/matts-shell-scripts/blob/main/syncmodels) integrates Ollama models with LM Studio and other tools.
 
 ---
 
