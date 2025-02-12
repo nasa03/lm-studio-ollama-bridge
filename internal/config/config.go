@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/spf13/viper"
 )
@@ -20,9 +21,34 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("unable to determine user home directory: %w", err)
 	}
 
-	configDir := filepath.Join(homeDir, ".config", "ollama-sync")
+	var configDir, defaultManifest, defaultBlob, defaultDest string
+
+	if runtime.GOOS == "windows" {
+		appData := os.Getenv("APPDATA")
+		localAppData := os.Getenv("LOCALAPPDATA")
+		// Fallback to home directory if these variables are not set.
+		if appData == "" {
+			appData = homeDir
+		}
+		if localAppData == "" {
+			localAppData = homeDir
+		}
+		// Use Windows conventions.
+		configDir = filepath.Join(appData, "ollama-sync")
+		defaultManifest = filepath.Join(appData, "Ollama", "models", "manifests", "registry.ollama.ai")
+		defaultBlob = filepath.Join(appData, "Ollama", "models", "blobs")
+		defaultDest = filepath.Join(localAppData, "lm-studio", "ollama")
+	} else {
+		// POSIX-style defaults.
+		configDir = filepath.Join(homeDir, ".config", "ollama-sync")
+		defaultManifest = filepath.Join(homeDir, ".ollama", "models", "manifests", "registry.ollama.ai")
+		defaultBlob = filepath.Join(homeDir, ".ollama", "models", "blobs")
+		defaultDest = filepath.Join(homeDir, ".cache", "lm-studio", "ollama")
+	}
+
 	configFile := filepath.Join(configDir, "config.yaml")
 
+	// If the config file does not exist, create it with default values.
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		if err := os.MkdirAll(configDir, 0755); err != nil {
 			return nil, fmt.Errorf("failed to create config directory: %w", err)
@@ -32,10 +58,7 @@ func LoadConfig() (*Config, error) {
 blob_dir: "%s"
 destinations:
   - "%s"
-`, filepath.Join(homeDir, ".ollama", "models", "manifests", "registry.ollama.ai"),
-			filepath.Join(homeDir, ".ollama", "models", "blobs"),
-			filepath.Join(homeDir, ".cache", "lm-studio", "ollama"),
-		))
+`, defaultManifest, defaultBlob, defaultDest))
 
 		if err := os.WriteFile(configFile, defaultConfig, 0644); err != nil {
 			return nil, fmt.Errorf("failed to write default config file: %w", err)
