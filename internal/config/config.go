@@ -20,17 +20,14 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("unable to determine user home directory: %w", err)
 	}
 
-	// Use a standard config directory.
-	configDir := filepath.Join(homeDir, ".config", "lmstudio-ollama-bridge")
+	configDir := filepath.Join(homeDir, ".config", "ollama-sync")
 	configFile := filepath.Join(configDir, "config.yaml")
 
-	// If the config file does not exist, create it with default values.
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		if err := os.MkdirAll(configDir, 0755); err != nil {
 			return nil, fmt.Errorf("failed to create config directory: %w", err)
 		}
 
-		// Define default configuration.
 		defaultConfig := []byte(fmt.Sprintf(`manifest_dir: "%s"
 blob_dir: "%s"
 destinations:
