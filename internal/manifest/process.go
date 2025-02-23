@@ -79,19 +79,31 @@ func ProcessManifest(manifestPath, blobDir string, destDirs []string, logger *lo
 			if err := os.Symlink(modelFile, symlinkName); err != nil {
 				logger.WithError(err).Warn("Symlink creation failed on Windows; attempting file copy as fallback")
 				if copyErr := copyFile(modelFile, symlinkName); copyErr != nil {
+					logger.WithError(copyErr).Error("Failed to create file copy as fallback")
 					return fmt.Errorf("failed to create file copy as fallback: %w", copyErr)
 				}
+			} else {
+				logger.WithField("symlink", symlinkName).Info("Successfully created symlink on Windows")
 			}
 		} else {
 			if err := os.Symlink(modelFile, symlinkName); err != nil {
+				logger.WithError(err).Error("Failed to create symbolic link")
 				return fmt.Errorf("failed to create symbolic link from %s to %s: %w", modelFile, symlinkName, err)
+			} else {
+				logger.WithField("symlink", symlinkName).Info("Successfully created symbolic link")
 			}
+		}
+
+		// Verify that the symlink exists
+		if _, err := os.Lstat(symlinkName); err != nil {
+			logger.WithError(err).Error("Symlink does not exist after creation")
+			return fmt.Errorf("symlink does not exist after creation: %w", err)
 		}
 
 		logger.WithFields(logrus.Fields{
 			"model_file": modelFile,
 			"symlink":    symlinkName,
-		}).Info("Successfully created symbolic link (or file copy fallback if not supported on Windows)")
+		}).Info("Completed symlink creation process")
 	}
 
 	return nil

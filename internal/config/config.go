@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -43,7 +44,7 @@ func LoadConfig() (*Config, error) {
 		configDir = filepath.Join(homeDir, ".config", "ollama-sync")
 		defaultManifest = filepath.Join(homeDir, ".ollama", "models", "manifests", "registry.ollama.ai")
 		defaultBlob = filepath.Join(homeDir, ".ollama", "models", "blobs")
-		defaultDest = filepath.Join(homeDir, ".cache", "lm-studio", "ollama")
+		defaultDest = filepath.Join(homeDir, ".cache", "lm-studio", "models", "ollama")
 	}
 
 	configFile := filepath.Join(configDir, "config.yaml")
@@ -66,6 +67,7 @@ destinations:
 	}
 
 	viper.SetConfigFile(configFile)
+	logrus.WithField("config_file", configFile).Info("Reading configuration from file")
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("error reading config file: %w", err)
 	}
@@ -74,6 +76,12 @@ destinations:
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to decode config into struct: %w", err)
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"manifest_dir":  cfg.ManifestDir,
+		"blob_dir":      cfg.BlobDir,
+		"destinations":  cfg.Destinations,
+	}).Info("Loaded configuration defaults")
 
 	return &cfg, nil
 }
